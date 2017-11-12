@@ -89,6 +89,21 @@ int main()
 
 		fgets(&buff[0], sizeof(buff), stdin);
 
+		if (!strcmp(&buff[0], "quit\n"))
+		{
+			printf("\nDisconnected - OK!\n");
+			closesocket(my_sock);
+			WSACleanup();
+
+			return 0;
+		}
+
+		for (int i = 0; i < strlen(buff); ++i)
+		{
+			if (buff[i] == '\n')
+				buff[i] = '\0';
+		}
+
 		send(my_sock, &buff[0], sizeof(buff), 0);
 	}
 
@@ -97,5 +112,5 @@ int main()
 	closesocket(my_sock);
 	WSACleanup();
 
-	return -1;
+	return 0;
 }

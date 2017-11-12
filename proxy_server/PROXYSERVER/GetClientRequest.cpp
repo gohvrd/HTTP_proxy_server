@@ -59,6 +59,36 @@ char* getIp(std::string svrName)
 	return ipstr;
 }
 
+bool IsCorrectIP(std::string svrName)
+{
+	int dotCount = 3, maxIpValue = 255;
+	size_t valueBegin = 0, valueLength = 0;
+	size_t portBegin;
+
+	for (size_t i = 0; i < svrName.length(); ++i)
+	{
+		if (svrName[i] == '.' || i == svrName.length() - 1)
+		{
+			if (i != svrName.length() - 1)
+			{
+				valueLength = i - valueBegin;
+				--dotCount;
+			}
+			else
+				valueLength = i - valueBegin + 1;
+
+			
+			std::string ipValue = svrName.substr(valueBegin, valueLength);
+			valueBegin = i + 1;
+
+			if (atoi(ipValue.c_str()) > maxIpValue)
+				return false;
+		}
+	}
+
+	return dotCount == 0;
+}
+
 int getCharUrl(std::string svrUrl, char* host, u_short &port, char* ip)
 {
 	strcpy_s(host, 30, svrUrl.c_str());
@@ -75,14 +105,23 @@ int getCharUrl(std::string svrUrl, char* host, u_short &port, char* ip)
 	else
 	{
 		svrName = svrUrl;
+		port = 80;
 	}
 
 	bool isIp = (strpbrk(svrName.c_str(), alphabet.c_str()) == NULL);
 
-	if (isIp){
-		strcpy_s(ip, 16, svrName.c_str());
+	if (isIp)
+	{
+		if (IsCorrectIP(svrName))
+			strcpy_s(ip, 16, svrName.c_str());
+		else
+		{
+			printf("Invalid IP adress\n");
+			return -1;
+		}
 	}
-	else{
+	else
+	{
 		strcpy_s(ip, 16, getIp(svrName));
 	}
 

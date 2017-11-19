@@ -23,7 +23,7 @@
     <ClInclude Include="GetClientRequest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Statistic.h">
+    <ClInclude Include="Statistic.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

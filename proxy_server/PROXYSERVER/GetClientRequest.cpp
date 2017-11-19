@@ -3,9 +3,8 @@
 #include <winsock2.h>
 #include <WS2tcpip.h>
 
-std::string ParseClientRequest(char* buff)
+std::string ParseClientRequest(std::string request)
 {
-	std::string request = buff;
 	std::string url;
 
 	size_t parseCursorOld = 0;

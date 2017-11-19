@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include 
 #include <iostream>
 
 #include "Statistic.hpp"

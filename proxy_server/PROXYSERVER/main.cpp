@@ -8,10 +8,11 @@
 
 #include "SendClientRequest.h"
 #include "GetClientRequest.h"
-#include "Statistic.h"
+#include "Statistic.hpp"
 
 #define MY_PORT 1380
 #define sHELLO "Hello, I'm demo TCP-echo SERVER\r\n"
+#define BUFF_SIZE 1024
 
 std::string request;
 
@@ -37,7 +38,7 @@ int main()
 {
 	WSADATA ws;
 
-	printf("TCP SERVER DEMO\n\n");
+	printf("PROXY SERVER DEMO\n\n");
 
 	if (WSAStartup(0x0202, &ws))
 	{
@@ -46,9 +47,8 @@ int main()
 		return -1;
 	}
 
-	SOCKET listen_sock;
+	SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, 0);
 
-	listen_sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_sock == -1)
 	{
 		printf("Error socket %d\n", WSAGetLastError());
@@ -80,8 +80,6 @@ int main()
 		return -1;
 	}
 
-	printf("Waiting for new connections!\n\n");
-
 	SOCKET client_socket;
 	sockaddr_in client_addr;
 
@@ -107,81 +105,84 @@ int main()
 DWORD WINAPI ClientTHread(void* threadData)
 {
 	ThreadData *data = (ThreadData*)threadData;
-	//Statistic statistic;
+	Statistic *statistic = new Statistic[1];
 	
-	//wcscpy_s(statistic.InternetProtocol, (wchar_t*)inet_ntoa(data.addr.sin_addr));
-	//wcscpy_s(statistic.ConnectTime, L"TIMETOSTRFROMSTRCT");
-
-	std::string request;
+	strcpy(statistic[0].InternetProtocol, inet_ntoa(data->addr.sin_addr));
+	strcpy(statistic[0].ConnectTime, "TIMETOSTRFROMSTRCT");
+		
 	SOCKET client;
 	client = data->socket;
 
-	char buff[300];
+	char *buff = new char[BUFF_SIZE];
 	char host[30];
 	u_short port = 80;
 	char ip[16];
-	char answer[300];
 
 	memset(buff, '\0', 300);
 	memset(host, '\0', 30);
 	memset(ip, '\0', 10);
-	memset(answer, '\0', 300);
 
-	send(client, sHELLO, sizeof(sHELLO), 0);
-
-	int lenght;
 	while (1)
 	{
-		memset(buff, '\0', 300);
-		memset(host, '\0', 30);
-		memset(ip, '\0', 10);
-		memset(answer, '\0', 300);
+		std::string request;
+		memset(buff, '\0', BUFF_SIZE);
 
-		if (lenght = recv(client, (char *)&buff, 300, 0) < 0)
-		{
-			nclients--;
-			printf("\n\nCLIENT DISCONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
-			closesocket(client);
-			return -1;
+		while (request.find("\r\n\r\n") == std::string::npos)
+		{		
+			int lenght;
+
+			if ((lenght = recv(client, buff, BUFF_SIZE, 0)) < 0)
+			{
+				PutInDatabase(statistic, 1);
+				nclients--;
+				printf("\n\nCLIENT DISCONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
+				closesocket(client);
+				return -1;
+			}
+			else
+			{
+				if (lenght == 0)
+				{
+					break;
+				}
+				else
+				{
+					if (strlen(buff) == 0)
+						continue;
+
+					request.append(buff);
+				}
+			}
+
+			statistic[0].CountReceiveDate += request.length();
 		}
 
-	//	statistic.CountReceiveDate += sizeof(buff);
-
-		if (strlen(buff) == 0)
-			continue;
-
-		if (getCharUrl(ParseClientRequest(buff), host, port, ip) < 0)
+		if (request.length() != 0)
 		{
-			nclients--;
-			printf("\n\nCLIENT DISCONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
-			closesocket(client);
-			return -1;
-		}		
+			printf("\nRequest:\n%s\n", request.c_str());
 
-		printf("IP: %s, PORT: %d\n", ip, port);
+			if (getCharUrl(ParseClientRequest(request), host, port, ip) < 0)
+			{
+				nclients--;
+				printf("\n\nCLIENT DISCONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
+				closesocket(client);
+				return -1;
+			}
 
-		SOCKET serverSock;
-		serverSock = socket(AF_INET, SOCK_STREAM, 0);
+			printf("IP: %s, PORT: %d\n", ip, port);
 
-		if (serverSock == -1)
-		{
-			printf("Error socket %d\n", WSAGetLastError());
-			WSACleanup();
+			SOCKET serverSock;
+			serverSock = socket(AF_INET, SOCK_STREAM, 0);
 
-			return -1;
+			if (serverSock == -1)
+			{
+				printf("Error socket %d\n", WSAGetLastError());
+				WSACleanup();
+
+				return -1;
+			}
+
+			SendClientRequest(serverSock, client, request, ip, port, statistic[0]);
 		}
-
-		//SendClientRequest(serverSock, buff, host, port, answer);
-		send(client,(char*) &buff, 300, 0);
-
-		//statistic.CountSendDate += sizeof(buff);
-
-		//PutInDatabase(&statistic, 1);
 	}
-
-	nclients--;
-	printf("\n\nCLIENT DISCONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
-	closesocket(client);
-
-	return 0;
 }

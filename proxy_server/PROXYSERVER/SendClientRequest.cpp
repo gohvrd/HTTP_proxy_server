@@ -1,34 +1,87 @@
 #include "stdafx.h"
+#include <string>
 #include <winsock2.h>
 
-int SendClientRequest(SOCKET server_sock, char *buff, char *ip, u_short port, char* answer)
+#include "Statistic.hpp"
+
+int SendClientRequest(SOCKET server_sock, SOCKET client_sock, std::string request, char *ip, u_short port, Statistic &statistic)
 {
 	sockaddr_in adr;
+	hostent* hst;
 
 	adr.sin_family = AF_INET;
-	adr.sin_addr.S_un.S_addr = inet_addr(ip);
+	adr.sin_addr.s_addr = inet_addr(ip);
 	adr.sin_port = htons(port);
 
-	if (SOCKET_ERROR == connect(server_sock, (sockaddr*)&adr, sizeof (adr)))
+
+	size_t buffSize = request.length();
+	char *buff = new char[buffSize];
+	strcpy(buff, request.c_str());
+
+	if (connect(server_sock, (sockaddr*)&adr, sizeof(adr)) < 0)
 	{
 		return -1;
 	}
 
-	if (SOCKET_ERROR == send(server_sock, (char*)&buff, 300, 0))
+	size_t totalsent = 0;
+	int senteach;
+
+	while (totalsent < buffSize)
 	{
-		return -1;
+		if ((senteach = send(server_sock, buff + totalsent, buffSize - totalsent, 0)) < 0)
+		{
+			return -1;
+		}
+
+		totalsent += senteach;
 	}
 
-	int len;
-	if (SOCKET_ERROR == (len = recv(server_sock, (char *)&answer, 300, 0)))
-		return -1;
+	std::string answerStr;
+	memset(buff, 0, buffSize);
 
-	//printf("\nAnswer:\n\n%s\n", buff);
-
-	if (SOCKET_ERROR == closesocket(server_sock))
+	while (answerStr.find("\r\n\r\n") == std::string::npos)
 	{
-		return -1;
+		int lenght;
+
+		if ((lenght = recv(server_sock, buff, buffSize, 0)) < 0)
+		{
+			return -1;
+		}
+		else
+		{
+			if (lenght == 0)
+			{
+				break;
+			}
+			else
+			{
+				if (strlen(buff) == 0)
+					continue;
+
+				answerStr.append(buff);
+			}
+		}
+
+		statistic.CountReceiveDate += answerStr.length();	
 	}
 
-	return 1;
+	totalsent = 0;
+	buffSize = answerStr.length();
+	buff = new char[buffSize];
+	memset(buff, 0, buffSize);
+	strcpy(buff, answerStr.c_str());
+
+	while (totalsent < buffSize)
+	{
+		if ((senteach = send(client_sock, buff + totalsent, buffSize - totalsent, 0)) < 0)
+		{
+			return -1;
+		}
+
+		totalsent += senteach;
+	}
+
+	closesocket(server_sock);
+
+	return 0;
 }

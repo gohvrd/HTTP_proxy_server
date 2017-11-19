@@ -9,10 +9,10 @@
 
 int main()
 {
-	char buff[1024];
-	printf("TCP DEMO CLIENT\n\n");
+	WSADATA ws;
+	printf("PROXY DEMO CLIENT\n\n");
 
-	if (WSAStartup(0x202, (WSADATA *)&buff[0]))
+	if (WSAStartup(0x202, &ws))
 	{
 		printf("WSAStart error %d\n", WSAGetLastError());
 
@@ -58,7 +58,6 @@ int main()
 
 	printf("Connection to the %s was successfully installed!\nType \"quit\" for disconnect\n\n", SERVERADDR);
 
-	memset(buff, '\0', sizeof(buff));
 
 	/*while (recv(my_sock, &buff[0], sizeof(buff), 0) > 0)
 	{
@@ -83,13 +82,18 @@ int main()
 
 	}*/
 
+	
+
 	while (1)
 	{
+		char* buff = new char[1040];
+		memset(buff, 0, 1040);
+
 		printf("\nS<=C:");
 
-		fgets(&buff[0], sizeof(buff), stdin);
+		fgets(buff, 1040, stdin);
 
-		if (!strcmp(&buff[0], "quit\n"))
+		if (!strcmp(buff, "quit\n"))
 		{
 			printf("\nDisconnected - OK!\n");
 			closesocket(my_sock);
@@ -101,10 +105,16 @@ int main()
 		for (int i = 0; i < strlen(buff); ++i)
 		{
 			if (buff[i] == '\n')
-				buff[i] = '\0';
+			{
+				buff[i] = '\r';
+				buff[i+1] = '\n';
+				buff[i+2] = '\r';
+				buff[i+3] = '\n';
+				break;
+			}
 		}
 
-		send(my_sock, &buff[0], sizeof(buff), 0);
+		send(my_sock, buff, 1040, 0);
 	}
 
 

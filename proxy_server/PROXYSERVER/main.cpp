@@ -11,10 +11,9 @@
 #include "Statistic.hpp"
 
 #define MY_PORT 1380
-#define sHELLO "Hello, I'm demo TCP-echo SERVER\r\n"
 #define BUFF_SIZE 1024
 
-std::string request;
+DWORD WINAPI ClientTHread(void* threadData);
 
 struct ThreadData
 {
@@ -22,17 +21,8 @@ struct ThreadData
 	sockaddr_in addr;
 };
 
-void print_users(int nclients)
-{
-	if (nclients)
-		printf("%d users on-line\n", nclients);
-	else 
-		printf("0 users on-line\n");
-}
-
-DWORD WINAPI ClientTHread(void* threadData);
-
 int nclients = 0;
+std::string request;
 
 int main()
 {
@@ -85,7 +75,7 @@ int main()
 
 	int client_addr_size = sizeof(client_addr);
 
-	while (1)
+	while (true)
 	{
 		client_socket = accept(listen_sock, (sockaddr *)&client_addr, &client_addr_size);
 		nclients++;
@@ -98,17 +88,18 @@ int main()
 		DWORD thID;
 		CreateThread(NULL, NULL, ClientTHread, (void*)&data, NULL, &thID);
 	}
-
-	return 0;
 }
 
 DWORD WINAPI ClientTHread(void* threadData)
 {
 	ThreadData *data = (ThreadData*)threadData;
-	Statistic *statistic = new Statistic[1];
+	Statistic statistic;
 	
-	strcpy(statistic[0].InternetProtocol, inet_ntoa(data->addr.sin_addr));
-	strcpy(statistic[0].ConnectTime, "TIMETOSTRFROMSTRCT");
+	strcpy(statistic.InternetProtocol, inet_ntoa(data->addr.sin_addr));
+
+	std::string time = GetCurrTime();
+
+	strcpy(statistic.ConnectTime, time.c_str());
 		
 	SOCKET client;
 	client = data->socket;
@@ -122,7 +113,7 @@ DWORD WINAPI ClientTHread(void* threadData)
 	memset(host, '\0', 30);
 	memset(ip, '\0', 10);
 
-	while (1)
+	while (true)
 	{
 		std::string request;
 		memset(buff, '\0', BUFF_SIZE);
@@ -133,7 +124,6 @@ DWORD WINAPI ClientTHread(void* threadData)
 
 			if ((lenght = recv(client, buff, BUFF_SIZE, 0)) < 0)
 			{
-				PutInDatabase(statistic, 1);
 				nclients--;
 				printf("\n\nCLIENT DISCONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
 				closesocket(client);
@@ -154,14 +144,28 @@ DWORD WINAPI ClientTHread(void* threadData)
 				}
 			}
 
-			statistic[0].CountReceiveDate += request.length();
+			statistic.CountSendDate += request.length();
 		}
 
 		if (request.length() != 0)
 		{
 			printf("\nRequest:\n%s\n", request.c_str());
 
-			if (getCharUrl(ParseClientRequest(request), host, port, ip) < 0)
+			std::string pResult = ParseClientRequest(request);
+
+			if (pResult == "GETSTATISTIC")
+			{
+				std::string dataFromBase = ReadStringFromDatabase();
+				char buffClients[20];
+				memset(buffClients, 0, 20);
+				sprintf(buffClients, "\*%d\r\n\r\n", nclients);
+				dataFromBase += buffClients;
+				
+				send(client, dataFromBase.c_str(), dataFromBase.length(), 0);
+				continue;
+			}
+
+			if (getCharUrl(pResult, host, port, ip) < 0)
 			{
 				nclients--;
 				printf("\n\nCLIENT DISCONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
@@ -182,7 +186,16 @@ DWORD WINAPI ClientTHread(void* threadData)
 				return -1;
 			}
 
-			SendClientRequest(serverSock, client, request, ip, port, statistic[0]);
+			SendClientRequest(serverSock, client, request, ip, port, statistic);
+
+			PutInDatabase(statistic);
+		}
+		else
+		{
+			nclients--;
+			printf("\n\nCLIENT DISCONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
+			closesocket(client);
+			return -1;
 		}
 	}
 }

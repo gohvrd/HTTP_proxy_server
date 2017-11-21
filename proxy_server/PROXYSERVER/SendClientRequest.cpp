@@ -2,34 +2,34 @@
 #include <string>
 #include <winsock2.h>
 
+#define BUFF_SIZE 1024
+
 #include "Statistic.hpp"
 
 int SendClientRequest(SOCKET server_sock, SOCKET client_sock, std::string request, char *ip, u_short port, Statistic &statistic)
 {
 	sockaddr_in adr;
-	hostent* hst;
-
 	adr.sin_family = AF_INET;
 	adr.sin_addr.s_addr = inet_addr(ip);
 	adr.sin_port = htons(port);
 
-
-	size_t buffSize = request.length();
-	char *buff = new char[buffSize];
+	char *buff = new char[BUFF_SIZE];
 	strcpy(buff, request.c_str());
 
 	if (connect(server_sock, (sockaddr*)&adr, sizeof(adr)) < 0)
 	{
+		printf("Connect to remote server error!\n");
 		return -1;
 	}
 
 	size_t totalsent = 0;
 	int senteach;
 
-	while (totalsent < buffSize)
+	while (totalsent < BUFF_SIZE)
 	{
-		if ((senteach = send(server_sock, buff + totalsent, buffSize - totalsent, 0)) < 0)
+		if ((senteach = send(server_sock, buff + totalsent, BUFF_SIZE - totalsent, 0)) < 0)
 		{
+			printf("Send to remote server error!\n");
 			return -1;
 		}
 
@@ -37,14 +37,15 @@ int SendClientRequest(SOCKET server_sock, SOCKET client_sock, std::string reques
 	}
 
 	std::string answerStr;
-	memset(buff, 0, buffSize);
+	memset(buff, 0, BUFF_SIZE);
 
 	while (answerStr.find("\r\n\r\n") == std::string::npos)
 	{
 		int lenght;
 
-		if ((lenght = recv(server_sock, buff, buffSize, 0)) < 0)
+		if ((lenght = recv(server_sock, buff, BUFF_SIZE, 0)) < 0)
 		{
+			printf("Receive from remote server error!\n");
 			return -1;
 		}
 		else
@@ -66,15 +67,15 @@ int SendClientRequest(SOCKET server_sock, SOCKET client_sock, std::string reques
 	}
 
 	totalsent = 0;
-	buffSize = answerStr.length();
-	buff = new char[buffSize];
-	memset(buff, 0, buffSize);
+	buff = new char[BUFF_SIZE];
+	memset(buff, 0, BUFF_SIZE);
 	strcpy(buff, answerStr.c_str());
 
-	while (totalsent < buffSize)
+	while (totalsent < BUFF_SIZE)
 	{
-		if ((senteach = send(client_sock, buff + totalsent, buffSize - totalsent, 0)) < 0)
+		if ((senteach = send(client_sock, buff + totalsent, BUFF_SIZE - totalsent, 0)) < 0)
 		{
+			printf("Send answer to client error!\n");
 			return -1;
 		}
 

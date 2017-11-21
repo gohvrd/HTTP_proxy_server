@@ -1,11 +1,12 @@
 #include "stdafx.h"
 
-#include <string.h>
+#include <string>
 #include <winsock2.h>
 #include <windows.h>
 
 #define PORT 1380
 #define SERVERADDR "127.0.0.1"
+#define BUFF_SIZE 1024
 
 int main()
 {
@@ -38,7 +39,6 @@ int main()
 	else
 
 	if (hst = gethostbyname(SERVERADDR))
-		// hst->h_addr_list содержит не массив адресов, а массив указателей на адреса
 		((unsigned long *)&dest_addr.sin_addr)[0] = ((unsigned long **)hst->h_addr_list)[0][0];
 	else
 	{
@@ -57,34 +57,8 @@ int main()
 	}
 
 	printf("Connection to the %s was successfully installed!\nType \"quit\" for disconnect\n\n", SERVERADDR);
-
-
-	/*while (recv(my_sock, &buff[0], sizeof(buff), 0) > 0)
-	{
-	printf("\nS=>C:%s", buff);
-
-	printf("\nS<=C:");
-
-	fgets(&buff[0], sizeof(buff), stdin);
-
-	if (!strcmp(&buff[0], "quit\n"))
-	{
-	printf("\nDisconnected - OK!\n");
-	closesocket(my_sock);
-	WSACleanup();
-
-	return 0;
-	}
-
-	send(my_sock, &buff[0], sizeof(buff), 0);
-
-	memset(buff, '\0', sizeof(buff));
-
-	}*/
-
 	
-
-	while (1)
+	while (true)
 	{
 		char* buff = new char[1040];
 		memset(buff, 0, 1040);
@@ -115,12 +89,37 @@ int main()
 		}
 
 		send(my_sock, buff, 1040, 0);
+
+		std::string answer;
+
+		while (answer.find("\r\n\r\n") == std::string::npos)
+		{
+			memset(buff, '\0', BUFF_SIZE);
+
+			int lenght;
+
+			if ((lenght = recv(my_sock, buff, BUFF_SIZE, 0)) < 0)
+			{
+				printf("\n\nCLIENT DISCONNECTED!\n\n");
+				closesocket(my_sock);
+				return -1;
+			}
+			else
+			{
+				if (lenght == 0)
+				{
+					break;
+				}
+				else
+				{
+					if (strlen(buff) == 0)
+						continue;
+
+					answer.append(buff);
+				}
+			}
+		}
+
+		printf("\nAnswer: %s", answer.c_str());
 	}
-
-
-	printf("Receiving error %d\n", WSAGetLastError());
-	closesocket(my_sock);
-	WSACleanup();
-
-	return 0;
 }

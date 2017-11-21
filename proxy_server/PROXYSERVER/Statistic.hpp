@@ -8,4 +8,6 @@ struct Statistic
 	unsigned int CountSendDate = 0;
 };
 
-bool PutInDatabase(Statistic *statistic, unsigned int count);
+bool PutInDatabase(Statistic &statistic);
+std::string GetCurrTime();
+std::string ReadStringFromDatabase();

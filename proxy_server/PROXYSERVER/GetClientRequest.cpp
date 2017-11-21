@@ -3,25 +3,29 @@
 #include <winsock2.h>
 #include <WS2tcpip.h>
 
-std::string ParseClientRequest(std::string request)
+std::string ParseClientRequest(std::string &request)
 {
 	std::string url;
 
 	size_t parseCursorOld = 0;
-	size_t parseCursorNew = request.find_first_of(" ", parseCursorOld);;
+	size_t parseCursorNew = request.find_first_of(" ", parseCursorOld);
 	std::string httpMethod, httpProtocol, requestHeader;
 	std::string requestHeaderName, requestHeaderContent;
 
 	httpMethod = request.substr(parseCursorOld, parseCursorNew - parseCursorOld);
+
+	if (httpMethod == "GETSTATISTIC")
+		return httpMethod;
+
 	parseCursorOld = parseCursorNew + 1;
 
 	parseCursorNew = request.find_first_of(" ", parseCursorOld);
-	url = request.substr(parseCursorOld, parseCursorNew - parseCursorOld);
+	url = request.substr(parseCursorOld, parseCursorNew - parseCursorOld);	
 
 	return url;
 }
 
-char* getIp(std::string svrName)
+char* getIp(std::string &svrName)
 {
 	struct addrinfo hints, *res;
 	char ipstr[16];
@@ -58,7 +62,7 @@ char* getIp(std::string svrName)
 	return ipstr;
 }
 
-bool IsCorrectIP(std::string svrName)
+bool IsCorrectIP(std::string &svrName)
 {
 	int dotCount = 3, maxIpValue = 255;
 	size_t valueBegin = 0, valueLength = 0;
@@ -88,7 +92,7 @@ bool IsCorrectIP(std::string svrName)
 	return dotCount == 0;
 }
 
-int getCharUrl(std::string svrUrl, char* host, u_short &port, char* ip)
+int getCharUrl(std::string &svrUrl, char* host, u_short &port, char* ip)
 {
 	strcpy_s(host, 30, svrUrl.c_str());
 

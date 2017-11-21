@@ -12,7 +12,7 @@ struct ThreadData
 	sockaddr_in addr;
 };
 
-DWORD WINAPI ClientTHread(void* threadData);
+DWORD WINAPI ClientThread(void* threadData);
 
 int main()
 {
@@ -42,7 +42,7 @@ int main()
 	local_addr.sin_port = htons(MY_PORT);
 	local_addr.sin_addr.s_addr = INADDR_ANY;
 
-	if (bind(listen_sock, (struct sockaddr*)&local_addr, sizeof(local_addr)))
+	if (bind(listen_sock, (sockaddr*)&local_addr, sizeof(local_addr)))
 	{
 		printf("Error bind %d\n", WSAGetLastError());
 		closesocket(listen_sock);
@@ -65,9 +65,9 @@ int main()
 
 	int client_addr_size = sizeof(client_addr);
 
-	while (1)
+	while (true)
 	{
-		client_socket = accept(listen_sock, (sockaddr *)&client_addr, &client_addr_size);
+		client_socket = accept(listen_sock, (sockaddr*)&client_addr, &client_addr_size);
 
 		printf("\n\nNEW CLIENT CONNECTED!\n\n");
 
@@ -76,34 +76,20 @@ int main()
 		data.addr = client_addr;
 
 		DWORD thID;
-		CreateThread(NULL, NULL, ClientTHread, (void*)&data, NULL, &thID);
+		CreateThread(NULL, NULL, ClientThread, (void*)&data, NULL, &thID);
 	}
-
-	return 0;
 }
 
-DWORD WINAPI ClientTHread(void* threadData)
+DWORD WINAPI ClientThread(void* threadData)
 {
 	ThreadData *data = (ThreadData*)threadData;
-	//Statistic statistic;
-
-	//wcscpy_s(statistic.InternetProtocol, (wchar_t*)inet_ntoa(data.addr.sin_addr));
-	//wcscpy_s(statistic.ConnectTime, L"TIMETOSTRFROMSTRCT");
 
 	std::string request;
 	SOCKET client;
 	client = data->socket;
 
 	char *buff = new char[BUFF_SIZE];
-	char host[30];
-	u_short port = 80;
-	char ip[16];
-	char answer[300];
-
-	memset(buff, '\0', 300);
-	memset(host, '\0', 30);
-	memset(ip, '\0', 10);
-	memset(answer, '\0', 300);
+	memset(buff, '\0', BUFF_SIZE);
 
 	while (request.find("\r\n\r\n") == std::string::npos)
 	{
@@ -115,6 +101,7 @@ DWORD WINAPI ClientTHread(void* threadData)
 		{
 			printf("\n\nCLIENT DISCONNECTED!\n\n");
 			closesocket(client);
+
 			return -1;
 		}
 		else
@@ -131,22 +118,25 @@ DWORD WINAPI ClientTHread(void* threadData)
 				request.append(buff);
 			}
 		}
-
-		//	statistic.CountReceiveDate += sizeof(buff);	
 	}
 
 	printf("\nRECIEVE:\n%s\n\n", request.c_str());
 
+	std::string answer;
+	int requestEndIndex = request.find("\r\n\r\n");
+	answer += request.substr(0, requestEndIndex) + " <-- FROM SERVER\r\n\r\n";
+	
 	int totalsent = 0, senteach;
-	int buffSize = request.length();
+	int buffSize = answer.length();
 	buff = new char[buffSize];
 	memset(buff, 0, buffSize);
-	strcpy(buff, request.c_str());
+	strcpy(buff, answer.c_str());
 
 	while (totalsent < buffSize)
 	{
 		if ((senteach = send(client, buff + totalsent, buffSize - totalsent, 0)) < 0)
 		{
+			printf("Send to client error!\n");
 			return -1;
 		}
 

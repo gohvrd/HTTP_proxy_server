@@ -25,7 +25,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -78,7 +78,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="GetClientRequest.h" />
+    <ClInclude Include="ParseClientRequest.h" />
     <ClInclude Include="Statistic.hpp" />
     <ClInclude Include="SendClientRequest.h" />
     <ClInclude Include="stdafx.h" />
@@ -87,7 +87,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="SendClientRequest.cpp" />
-    <ClCompile Include="GetClientRequest.cpp" />
+    <ClCompile Include="ParseClientRequest.cpp" />
     <ClCompile Include="Database.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

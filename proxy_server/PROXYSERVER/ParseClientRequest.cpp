@@ -3,25 +3,49 @@
 #include <winsock2.h>
 #include <WS2tcpip.h>
 
-std::string ParseClientRequest(std::string request)
+/*
+ * –азбор запроса клиента на составл€ющие (выделение метода	запроса, url)
+ */
+std::string ParseClientRequest(std::string &request)
 {
+	size_t parseCursorOld = 0;
+	size_t parseCursorNew = request.find_first_of(" ", parseCursorOld);
+
+	//	выделение метода запроса
+	std::string httpMethod = request.substr(parseCursorOld, parseCursorNew - parseCursorOld);
+
+	if (httpMethod == "GETALLSTAT")
+		return httpMethod;
+
+	if (httpMethod == "GETPERSONAL")
+	{
+		parseCursorOld = parseCursorNew + 1;
+
+		parseCursorNew = request.find_first_of("\r", parseCursorOld);
+
+		//	выделение IP адреса, дл€ которого была запрошена статистика
+
+		std::string ip = request.substr(parseCursorOld, parseCursorNew - parseCursorOld);
+
+		httpMethod += ip;
+
+		return httpMethod;
+	}
+
 	std::string url;
 
-	size_t parseCursorOld = 0;
-	size_t parseCursorNew = request.find_first_of(" ", parseCursorOld);;
-	std::string httpMethod, httpProtocol, requestHeader;
-	std::string requestHeaderName, requestHeaderContent;
-
-	httpMethod = request.substr(parseCursorOld, parseCursorNew - parseCursorOld);
 	parseCursorOld = parseCursorNew + 1;
 
 	parseCursorNew = request.find_first_of(" ", parseCursorOld);
-	url = request.substr(parseCursorOld, parseCursorNew - parseCursorOld);
+	url = request.substr(parseCursorOld, parseCursorNew - parseCursorOld);	
 
 	return url;
 }
 
-char* getIp(std::string svrName)
+/*
+ * ѕолучение IP адреса по доменному имени
+ */
+char* getIp(std::string &svrName)
 {
 	struct addrinfo hints, *res;
 	char ipstr[16];
@@ -58,7 +82,10 @@ char* getIp(std::string svrName)
 	return ipstr;
 }
 
-bool IsCorrectIP(std::string svrName)
+/*
+ * ѕроверка корректности IP адреса
+ */
+bool IsCorrectIP(std::string &svrName)
 {
 	int dotCount = 3, maxIpValue = 255;
 	size_t valueBegin = 0, valueLength = 0;
@@ -88,13 +115,19 @@ bool IsCorrectIP(std::string svrName)
 	return dotCount == 0;
 }
 
-int getCharUrl(std::string svrUrl, char* host, u_short &port, char* ip)
+/*
+ * «аполн€ем данными переменные port и ip
+ */
+int getCharUrl(std::string &svrUrl, u_short &port, char* ip)
 {
+	char host[30];
 	strcpy_s(host, 30, svrUrl.c_str());
 
-	size_t posParserOld = 0, posParserNew = 0;
 	std::string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	std::string svrName;
+	size_t posParserOld;
+
+	//	выдел€ем IP(возможно доменное им€) и порт
 
 	if ((posParserOld = svrUrl.find_first_of(":")) != std::string::npos)
 	{
@@ -107,15 +140,18 @@ int getCharUrl(std::string svrUrl, char* host, u_short &port, char* ip)
 		port = 80;
 	}
 
+	//	определ€ем что находитс€ в имени сервера: IP или доменное им€
+
 	bool isIp = (strpbrk(svrName.c_str(), alphabet.c_str()) == NULL);
 
+	//	если это IP, провер€ем его корректность
 	if (isIp)
 	{
 		if (IsCorrectIP(svrName))
 			strcpy_s(ip, 16, svrName.c_str());
 		else
 		{
-			printf("Invalid IP adress\n");
+			printf("Invalid IP address\n");
 			return -1;
 		}
 	}

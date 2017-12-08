@@ -6,8 +6,13 @@
 
 #include "Statistic.hpp"
 
-int SendClientRequest(SOCKET server_sock, SOCKET client_sock, std::string request, char *ip, u_short port, Statistic &statistic)
+/*
+ * Перенаправление сообщения клиента на сервер, получение и перенаправление ответа сервера клиенту, а также сбор статистических данных
+ */
+int SendClientRequest(SOCKET &server_sock, SOCKET &client_sock, std::string &request, char *ip, u_short port, Statistic &statistic)
 {
+	//	подключаем сокет к внешнему серверу (на который обращался клиент)
+
 	sockaddr_in adr;
 	adr.sin_family = AF_INET;
 	adr.sin_addr.s_addr = inet_addr(ip);
@@ -25,6 +30,8 @@ int SendClientRequest(SOCKET server_sock, SOCKET client_sock, std::string reques
 	size_t totalsent = 0;
 	int senteach;
 
+	//	отправляем запрос клиента внешнему серверу
+
 	while (totalsent < BUFF_SIZE)
 	{
 		if ((senteach = send(server_sock, buff + totalsent, BUFF_SIZE - totalsent, 0)) < 0)
@@ -39,37 +46,29 @@ int SendClientRequest(SOCKET server_sock, SOCKET client_sock, std::string reques
 	std::string answerStr;
 	memset(buff, 0, BUFF_SIZE);
 
+	//	пока нет идентификатора конца запроса, получаем данные от внешнего сервера
+
 	while (answerStr.find("\r\n\r\n") == std::string::npos)
 	{
-		int lenght;
-
-		if ((lenght = recv(server_sock, buff, BUFF_SIZE, 0)) < 0)
+		if (recv(server_sock, buff, BUFF_SIZE, 0) < 0)
 		{
 			printf("Receive from remote server error!\n");
 			return -1;
 		}
-		else
-		{
-			if (lenght == 0)
-			{
-				break;
-			}
-			else
-			{
-				if (strlen(buff) == 0)
-					continue;
 
-				answerStr.append(buff);
-			}
-		}
+		if (strlen(buff) == 0)
+			continue;
 
-		statistic.CountReceiveDate += answerStr.length();	
+		answerStr.append(buff);
+		statistic.CountReceiveDate += answerStr.length();
 	}
 
 	totalsent = 0;
 	buff = new char[BUFF_SIZE];
 	memset(buff, 0, BUFF_SIZE);
 	strcpy(buff, answerStr.c_str());
+
+	//	перенаправляем ответ внешнего сервера клиенту
 
 	while (totalsent < BUFF_SIZE)
 	{

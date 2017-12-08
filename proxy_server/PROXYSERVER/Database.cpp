@@ -26,7 +26,7 @@ std::string GetCurrTime()
 	time = timeBuff;
 	time += ":";
 
-	memset(timeBuff, 0, 4);
+	memset(timeBuff, 0, 5);
 	if (st.wMinute < 10)
 		sprintf(timeBuff, "0%d", st.wMinute);
 	else
@@ -34,7 +34,7 @@ std::string GetCurrTime()
 	time += timeBuff;
 	time += ":";
 
-	memset(timeBuff, 0, 4);
+	memset(timeBuff, 0, 5);
 	if (st.wSecond < 10)
 		sprintf(timeBuff, "0%d", st.wSecond);
 	else
@@ -42,36 +42,44 @@ std::string GetCurrTime()
 	time += timeBuff;
 	time += " ";
 
-	memset(timeBuff, 0, 4);
+	memset(timeBuff, 0, 5);
 	sprintf(timeBuff, "%d", st.wDay);
 	time += timeBuff;
 	time += ".";
 
-	memset(timeBuff, 0, 4);
+	memset(timeBuff, 0, 5);
 	sprintf(timeBuff, "%d", st.wMonth);
 	time += timeBuff;
 	time += ".";
 
-	memset(timeBuff, 0, 4);
+	memset(timeBuff, 0, 5);
 	sprintf(timeBuff, "%d", st.wYear);
 	time += timeBuff;
 
 	return time;
 }
 
-void WriteStructInFstream(FILE* file, Statistic oneStruct)
+bool WriteStructInFstream(Statistic oneStruct, char* mode = "a+")
 {
+	FILE *file;
+
+	if ((file = fopen(FILE_NAME, mode)) == NULL)
+		return false;
+
 	fprintf(file, "%s", "{\n");
 	fprintf(file, "%s", oneStruct.InternetProtocol);
 	fprintf(file, "%s", "\n");
 	fprintf(file, "%s", oneStruct.ConnectTime);
 	fprintf(file, "%s", "\n");
-	fprintf(file, "%d", oneStruct.CountSendDate);
-	fprintf(file, "%s", "\n");
 	fprintf(file, "%d", oneStruct.CountReceiveDate);
+	fprintf(file, "%s", "\n");
+	fprintf(file, "%d", oneStruct.CountSendDate);
 	fprintf(file, "%s", "\n}\n");
 
-	return;
+	if (fclose(file) == EOF)
+		return false;
+
+	return true;
 }
 
 unsigned int StructCount()
@@ -107,16 +115,16 @@ Statistic *ReadStructFromDatabase()
 
 	char buff[20];
 
-	for (int i(0); i < structCount; ++i)
+	for (unsigned int i(0); i < structCount; ++i)
 	{
 		file >> buff >> statistic[i].InternetProtocol >> statistic[i].ConnectTime >> buff;
 
 		statistic[i].ConnectTime[8] = ' ';
 
-		for (int j(0); j < 8; ++j)
+		for (int j(0); j < 10; ++j)
 			statistic[i].ConnectTime[j + 9] = buff[j];
 
-		statistic[i].ConnectTime[17] = '\0';
+		statistic[i].ConnectTime[19] = '\0';
 
 		file >> statistic[i].CountReceiveDate >> statistic[i].CountSendDate >> buff;
 	}
@@ -138,9 +146,9 @@ bool PutAllInDatabase(Statistic *statistic, unsigned int count)
 		fprintf(file, "%s", "\n");
 		fprintf(file, "%s", statistic[i].ConnectTime);
 		fprintf(file, "%s", "\n");
-		fprintf(file, "%d", statistic[i].CountSendDate);
-		fprintf(file, "%s", "\n");
 		fprintf(file, "%d", statistic[i].CountReceiveDate);
+		fprintf(file, "%s", "\n");
+		fprintf(file, "%d", statistic[i].CountSendDate);
 		fprintf(file, "%s", "\n}\n");
 	}
 
@@ -152,44 +160,34 @@ bool PutAllInDatabase(Statistic *statistic, unsigned int count)
 
 }
 
-bool PutInDatabase(Statistic &oneStruct)
+bool PutInDatabase(Statistic oneStruct)
 {
-	FILE *file;
-
 	unsigned int structCount = StructCount();
 
 	if (structCount == 0)
 	{
-		if ((file = fopen(FILE_NAME, "w")) == NULL)
-			return false;
-
-		WriteStructInFstream(file, oneStruct);
-
-		if (fclose(file) == EOF)
-			return false;
+		WriteStructInFstream(oneStruct);
 
 		return true;
 	}
 
 	Statistic *statistic = ReadStructFromDatabase();
 
-	for (int i(0); i < structCount; ++i)
-	if ((std::string(oneStruct.InternetProtocol) == std::string(statistic[i].InternetProtocol)))
+	for (unsigned int i(0); i < structCount; ++i)
 	{
-		statistic[i] = oneStruct;
+		if ((std::string(oneStruct.InternetProtocol) == std::string(statistic[i].InternetProtocol)))
+		{
+			strcpy(statistic[i].ConnectTime, oneStruct.ConnectTime);
+			statistic[i].CountReceiveDate += oneStruct.CountReceiveDate;
+			statistic[i].CountSendDate += oneStruct.CountSendDate;
 
-		PutAllInDatabase(statistic, structCount);
+			PutAllInDatabase(statistic, structCount);
 
-		return true;
+			return true;
+		}
 	}
 
-	if ((file = fopen(FILE_NAME, "a")) == NULL)
-		return NULL;
-
-	WriteStructInFstream(file, oneStruct);
-
-	if (fclose(file) == EOF)
-		return false;
+	WriteStructInFstream(oneStruct);
 
 	return true;
 }
@@ -198,13 +196,101 @@ std::string ReadStringFromDatabase()
 {
 	std::string resultString, buffString;
 
-
 	Statistic* statistic = ReadStructFromDatabase();
 
 	unsigned int structCount = StructCount();
 
-	for (int i(0); i < structCount; ++i)
-		resultString = resultString + std::string(statistic[i].InternetProtocol) + "?" + std::string(statistic[i].ConnectTime) + "?" + std::to_string(statistic[i].CountReceiveDate) + "?" + std::to_string(statistic[i].CountSendDate) + "!!!";
+	for (unsigned int i(0); i < structCount; ++i)
+		resultString = resultString + std::string(statistic[i].InternetProtocol) + "?" + std::string(statistic[i].ConnectTime) + "?" + std::to_string(statistic[i].CountReceiveDate) + "?" + std::to_string(statistic[i].CountSendDate) + "!";
 
 	return resultString;
+}
+
+unsigned int CountPersonalReceiveDate(const char* internetProtocol)
+{
+	Statistic* statistic = ReadStructFromDatabase();
+	unsigned int structCount = StructCount();
+
+	for (unsigned int i(0); i < structCount; ++i)
+	{
+		if (strcmp(internetProtocol, statistic[i].InternetProtocol) == 0)
+			return statistic[i].CountReceiveDate;
+	}
+
+	return false;
+}
+
+unsigned int CountAllReceiveDate()
+{
+	unsigned int countAllReceiveDate(0);
+
+	Statistic* statistic = ReadStructFromDatabase();
+	unsigned int structCount = StructCount();
+
+	for (unsigned int i(0); i < structCount; ++i)
+		countAllReceiveDate += statistic[i].CountReceiveDate;
+
+	return countAllReceiveDate;
+}
+
+unsigned int CountPersonalSendDate(const char* internetProtocol)
+{
+	Statistic* statistic = ReadStructFromDatabase();
+	unsigned int structCount = StructCount();
+
+	for (unsigned int i(0); i < structCount; ++i)
+	{
+		if (strcmp(internetProtocol, statistic[i].InternetProtocol) == 0)
+			return statistic[i].CountSendDate;
+	}
+
+	return false;
+}
+
+unsigned int CountAllSendDate()
+{
+	unsigned int countAllSendDate(0);
+
+	Statistic* statistic = ReadStructFromDatabase();
+	unsigned int structCount = StructCount();
+
+	for (unsigned int i(0); i < structCount; ++i)
+		countAllSendDate += statistic[i].CountSendDate;
+
+	return countAllSendDate;
+}
+
+char* PersonalConnectTime(const char* internetProtocol)
+{
+	Statistic* statistic = ReadStructFromDatabase();
+	unsigned int structCount = StructCount();
+
+	for (unsigned int i(0); i < structCount; ++i)
+	{
+		if (strcmp(internetProtocol, statistic[i].InternetProtocol) == 0)
+			return statistic[i].ConnectTime;
+	}
+
+	return false;
+}
+
+std::string GetPersonalStatistic(const char* IP)
+{
+	std::string result;
+	char buff[12];
+	unsigned int count;
+	if ((count = CountPersonalReceiveDate(IP)) == 0)
+		sprintf(buff, "null");
+	else
+		sprintf(buff, "%d", CountPersonalReceiveDate(IP));
+	std::string recieve(buff);
+
+	if ((count = CountPersonalSendDate(IP)) == 0)
+		sprintf(buff, "null");
+	else
+		sprintf(buff, "%d", CountPersonalSendDate(IP));
+	std::string send(buff);
+	result += std::string(IP) + "?" + PersonalConnectTime(IP) + "?" + recieve + "?" + send + "!";
+
+	return result;
 }

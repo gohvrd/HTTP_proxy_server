@@ -3,11 +3,13 @@
 struct Statistic
 {
 	char InternetProtocol[17];					//XXX.XXX.XXX.XXX.
-	char ConnectTime[20];						//DD.MM.YYYY HH:MM:SS
+	char ConnectTime[22];						//DD.MM.YYYY HH:MM:SS
 	unsigned int CountReceiveDate = 0;
 	unsigned int CountSendDate = 0;
 };
 
-bool PutInDatabase(Statistic &statistic);
 std::string GetCurrTime();
+
+bool PutInDatabase(Statistic oneStruct);
 std::string ReadStringFromDatabase();
+std::string GetPersonalStatistic(const char* IP);

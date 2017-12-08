@@ -20,10 +20,10 @@
     <ClInclude Include="SendClientRequest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GetClientRequest.h">
+    <ClInclude Include="Statistic.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Statistic.hpp">
+    <ClInclude Include="ParseClientRequest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -37,10 +37,10 @@
     <ClCompile Include="SendClientRequest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GetClientRequest.cpp">
+    <ClCompile Include="Database.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Database.cpp">
+    <ClCompile Include="ParseClientRequest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

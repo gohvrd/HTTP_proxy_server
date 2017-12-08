@@ -7,13 +7,13 @@
 #include <iostream>
 
 #include "SendClientRequest.h"
-#include "GetClientRequest.h"
+#include "ParseClientRequest.h"
 #include "Statistic.hpp"
 
 #define MY_PORT 1380
 #define BUFF_SIZE 1024
 
-DWORD WINAPI ClientTHread(void* threadData);
+DWORD WINAPI ClientThread(void* threadData);
 
 struct ThreadData
 {
@@ -22,7 +22,6 @@ struct ThreadData
 };
 
 int nclients = 0;
-std::string request;
 
 int main()
 {
@@ -36,6 +35,8 @@ int main()
 
 		return -1;
 	}
+	
+	//	создание слушающего сокета
 
 	SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -52,6 +53,8 @@ int main()
 	local_addr.sin_port = htons(MY_PORT);
 	local_addr.sin_addr.s_addr = INADDR_ANY;
 
+	//	"привязка сокета" к адресу и порту
+
 	if (bind(listen_sock, (struct sockaddr*)&local_addr, sizeof(local_addr)))
 	{
 		printf("Error bind %d\n", WSAGetLastError());
@@ -60,6 +63,8 @@ int main()
 
 		return -1;
 	}
+
+	//	устанавливаем сокет в режим прослушивания
 
 	if (listen(listen_sock, 5))
 	{
@@ -77,6 +82,8 @@ int main()
 
 	while (true)
 	{
+		//	создание сокета для каждого подключившегося клиента
+
 		client_socket = accept(listen_sock, (sockaddr *)&client_addr, &client_addr_size);
 		nclients++;
 		printf("\n\nNEW CLIENT CONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
@@ -85,38 +92,39 @@ int main()
 		data.socket = client_socket;
 		data.addr = client_addr;
 
+		//	создание отдельного потока для обработки запросов каждого клиента
+
 		DWORD thID;
-		CreateThread(NULL, NULL, ClientTHread, (void*)&data, NULL, &thID);
+		CreateThread(NULL, NULL, ClientThread, (void*)&data, NULL, &thID);
 	}
 }
 
-DWORD WINAPI ClientTHread(void* threadData)
+DWORD WINAPI ClientThread(void* threadData)
 {
-	ThreadData *data = (ThreadData*)threadData;
-	Statistic statistic;
-	
-	strcpy(statistic.InternetProtocol, inet_ntoa(data->addr.sin_addr));
-
-	std::string time = GetCurrTime();
-
-	strcpy(statistic.ConnectTime, time.c_str());
-		
+	ThreadData *data = (ThreadData*)threadData;		
 	SOCKET client;
 	client = data->socket;
 
 	char *buff = new char[BUFF_SIZE];
-	char host[30];
 	u_short port = 80;
 	char ip[16];
 
 	memset(buff, '\0', 300);
-	memset(host, '\0', 30);
 	memset(ip, '\0', 10);
+
+	//	цикл принятия и обработки сообщений клиентов и отправки им ответов
 
 	while (true)
 	{
+		Statistic statistic;
+		strcpy(statistic.InternetProtocol, inet_ntoa(data->addr.sin_addr));
+		std::string time = GetCurrTime();
+		strcpy(statistic.ConnectTime, time.c_str());
+
 		std::string request;
 		memset(buff, '\0', BUFF_SIZE);
+
+		// пока не найден символ конца запроса, продолжаем принимать данные от клиента
 
 		while (request.find("\r\n\r\n") == std::string::npos)
 		{		
@@ -144,16 +152,24 @@ DWORD WINAPI ClientTHread(void* threadData)
 				}
 			}
 
+			// добавление данных статистики в базу
+
 			statistic.CountSendDate += request.length();
 		}
+
+		// обработка запроса
 
 		if (request.length() != 0)
 		{
 			printf("\nRequest:\n%s\n", request.c_str());
 
+			//функция разбора запроса
+
 			std::string pResult = ParseClientRequest(request);
 
-			if (pResult == "GETSTATISTIC")
+			// запрос на представление данных о всех пользователях из базы
+
+			if (pResult == "GETALLSTAT")
 			{
 				std::string dataFromBase = ReadStringFromDatabase();
 				char buffClients[20];
@@ -162,10 +178,31 @@ DWORD WINAPI ClientTHread(void* threadData)
 				dataFromBase += buffClients;
 				
 				send(client, dataFromBase.c_str(), dataFromBase.length(), 0);
+
 				continue;
 			}
 
-			if (getCharUrl(pResult, host, port, ip) < 0)
+			//	запрос на представление данных о конкретном пользователе из базы
+
+			if (pResult.find("GETPERSONAL") != std::string::npos)
+			{
+				int begin = pResult.find("GETPERSONAL");
+				std::string stat_ip = pResult.substr(begin + 11, pResult.length());
+				std::string dataFromBase = GetPersonalStatistic(stat_ip.c_str());
+
+				char buffClients[20];
+				memset(buffClients, 0, 20);
+				sprintf(buffClients, "\*%d\r\n\r\n", nclients);
+				dataFromBase += buffClients;
+
+				send(client, dataFromBase.c_str(), dataFromBase.length(), 0);
+
+				continue;
+			}
+
+			//	если это не запрос статистики, то выделяем IP внешнего сервера и его порт
+
+			if (getCharUrl(pResult, port, ip) < 0)
 			{
 				nclients--;
 				printf("\n\nCLIENT DISCONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
@@ -186,8 +223,11 @@ DWORD WINAPI ClientTHread(void* threadData)
 				return -1;
 			}
 
+			//	создание сокета для обращения к внешнему серверу, получение от него ответа и пересылка данных клиенту
+
 			SendClientRequest(serverSock, client, request, ip, port, statistic);
 
+			//	запись статистики в базу данных
 			PutInDatabase(statistic);
 		}
 		else

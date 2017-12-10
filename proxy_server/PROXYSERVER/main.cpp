@@ -117,7 +117,11 @@ DWORD WINAPI ClientThread(void* threadData)
 	while (true)
 	{
 		Statistic statistic;
-		strcpy(statistic.InternetProtocol, inet_ntoa(data->addr.sin_addr));
+		std::string ip_port;
+		ip_port = inet_ntoa(data->addr.sin_addr);
+		ip_port += ":";
+		ip_port += std::to_string(data->addr.sin_port);
+		strcpy(statistic.InternetProtocol, ip_port.c_str());
 		std::string time = GetCurrTime();
 		strcpy(statistic.ConnectTime, time.c_str());
 

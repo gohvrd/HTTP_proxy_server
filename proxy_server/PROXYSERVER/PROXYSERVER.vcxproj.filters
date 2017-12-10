@@ -17,13 +17,10 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SendClientRequest.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Statistic.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ParseClientRequest.h">
+    <ClInclude Include="ProxyServer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -34,13 +31,16 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SendClientRequest.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Database.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ParseClientRequest.cpp">
+    <ClCompile Include="ProxyServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ClientInteracting.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RemoteServInteracting.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

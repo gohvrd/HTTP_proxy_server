@@ -1,13 +1,6 @@
 #include "stdafx.h"
 
-#include <iostream>
-#include <fstream>
-#include <windows.h>
-#include <string>
-
 #include "Statistic.hpp"
-
-#define FILE_NAME "Statistic.json"
 
 std::string GetCurrTime()
 {
@@ -26,7 +19,7 @@ std::string GetCurrTime()
 	time = timeBuff;
 	time += ":";
 
-	memset(timeBuff, 0, 5);
+	memset(timeBuff, 0, 4);
 	if (st.wMinute < 10)
 		sprintf(timeBuff, "0%d", st.wMinute);
 	else
@@ -34,7 +27,7 @@ std::string GetCurrTime()
 	time += timeBuff;
 	time += ":";
 
-	memset(timeBuff, 0, 5);
+	memset(timeBuff, 0, 4);
 	if (st.wSecond < 10)
 		sprintf(timeBuff, "0%d", st.wSecond);
 	else
@@ -42,17 +35,17 @@ std::string GetCurrTime()
 	time += timeBuff;
 	time += " ";
 
-	memset(timeBuff, 0, 5);
+	memset(timeBuff, 0, 4);
 	sprintf(timeBuff, "%d", st.wDay);
 	time += timeBuff;
 	time += ".";
 
-	memset(timeBuff, 0, 5);
+	memset(timeBuff, 0, 4);
 	sprintf(timeBuff, "%d", st.wMonth);
 	time += timeBuff;
 	time += ".";
 
-	memset(timeBuff, 0, 5);
+	memset(timeBuff, 0, 4);
 	sprintf(timeBuff, "%d", st.wYear);
 	time += timeBuff;
 
@@ -113,7 +106,7 @@ Statistic *ReadStructFromDatabase()
 
 	std::ifstream file(FILE_NAME);
 
-	char buff[20];
+	char buff[23];
 
 	for (unsigned int i(0); i < structCount; ++i)
 	{
@@ -121,10 +114,10 @@ Statistic *ReadStructFromDatabase()
 
 		statistic[i].ConnectTime[8] = ' ';
 
-		for (int j(0); j < 10; ++j)
+		for (int j(0); j < 8; ++j)
 			statistic[i].ConnectTime[j + 9] = buff[j];
 
-		statistic[i].ConnectTime[19] = '\0';
+		statistic[i].ConnectTime[17] = '\0';
 
 		file >> statistic[i].CountReceiveDate >> statistic[i].CountSendDate >> buff;
 	}
@@ -277,7 +270,7 @@ char* PersonalConnectTime(const char* internetProtocol)
 std::string GetPersonalStatistic(const char* IP)
 {
 	std::string result;
-	char buff[12];
+	char buff[10];
 	unsigned int count;
 	if ((count = CountPersonalReceiveDate(IP)) == 0)
 		sprintf(buff, "null");

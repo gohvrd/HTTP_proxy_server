@@ -1,27 +1,5 @@
 #include "stdafx.h"
-
-#include <winsock2.h>
-#include <WS2tcpip.h>
-#include <windows.h>
-#include <string>
-#include <iostream>
-
-#include "SendClientRequest.h"
-#include "ParseClientRequest.h"
-#include "Statistic.hpp"
-
-#define MY_PORT 1380
-#define BUFF_SIZE 1024
-
-DWORD WINAPI ClientThread(void* threadData);
-
-struct ThreadData
-{
-	SOCKET socket;
-	sockaddr_in addr;
-};
-
-int nclients = 0;
+#include "ProxyServer.h"
 
 int main()
 {
@@ -35,69 +13,11 @@ int main()
 
 		return -1;
 	}
-	
-	//	создание слушающего сокета
 
-	SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, 0);
-
-	if (listen_sock == -1)
-	{
-		printf("Error socket %d\n", WSAGetLastError());
-		WSACleanup();
-
-		return -1;
-	}
-
-	sockaddr_in local_addr;
-	local_addr.sin_family = AF_INET;
-	local_addr.sin_port = htons(MY_PORT);
-	local_addr.sin_addr.s_addr = INADDR_ANY;
-
-	//	"привязка сокета" к адресу и порту
-
-	if (bind(listen_sock, (struct sockaddr*)&local_addr, sizeof(local_addr)))
-	{
-		printf("Error bind %d\n", WSAGetLastError());
-		closesocket(listen_sock);
-		WSACleanup();
-
-		return -1;
-	}
-
-	//	устанавливаем сокет в режим прослушивания
-
-	if (listen(listen_sock, 5))
-	{
-		printf("Error listen %d\n", WSAGetLastError());
-		closesocket(listen_sock);
-		WSACleanup();
-
-		return -1;
-	}
-
-	SOCKET client_socket;
-	sockaddr_in client_addr;
-
-	int client_addr_size = sizeof(client_addr);
-
-	while (true)
-	{
-		//	создание сокета для каждого подключившегося клиента
-
-		client_socket = accept(listen_sock, (sockaddr *)&client_addr, &client_addr_size);
-		nclients++;
-		printf("\n\nNEW CLIENT CONNECTED!\nCOUNT OF CLIENTS: %d\n\n", nclients);
-
-		ThreadData data;
-		data.socket = client_socket;
-		data.addr = client_addr;
-
-		//	создание отдельного потока для обработки запросов каждого клиента
-
-		DWORD thID;
-		CreateThread(NULL, NULL, ClientThread, (void*)&data, NULL, &thID);
-	}
+	start_server();
 }
+<<<<<<< HEAD
+=======
 
 DWORD WINAPI ClientThread(void* threadData)
 {
@@ -117,7 +37,11 @@ DWORD WINAPI ClientThread(void* threadData)
 	while (true)
 	{
 		Statistic statistic;
-		strcpy(statistic.InternetProtocol, inet_ntoa(data->addr.sin_addr));
+		std::string ip_port;
+		ip_port = inet_ntoa(data->addr.sin_addr);
+		ip_port += ":";
+		ip_port += std::to_string(data->addr.sin_port);
+		strcpy(statistic.InternetProtocol, ip_port.c_str());
 		std::string time = GetCurrTime();
 		strcpy(statistic.ConnectTime, time.c_str());
 
@@ -239,3 +163,4 @@ DWORD WINAPI ClientThread(void* threadData)
 		}
 	}
 }
+>>>>>>> c6339e7786b9baee09bc0c9f7ff055d1be0bab94
